@@ -9,9 +9,8 @@ const cors = require("cors");
 const app = express();
 const port = 3000;
 const peerEndpoint = "localhost:7051";
-const peerHostOverride = "peer0.org1.example.com"; // Изменить на другой хост для другой организации при передаче
+const peerHostOverride = "peer0.org1.example.com";
 
-// Укажите пути к сертификатам и ключам
 const tlsCertPath =
   "/home/user/project/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem";
 const certPath =
