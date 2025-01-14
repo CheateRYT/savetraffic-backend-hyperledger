@@ -17,8 +17,6 @@ const certPath =
   "/home/user/project/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem";
 const keyPath =
   "/home/user/project/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore/priv_sk";
-
-// Функция для создания gRPC подключения
 async function newGrpcConnection() {
   const tlsRootCert = await fs.promises.readFile(tlsCertPath); // Читаем корневой сертификат
   const tlsCredentials = grpc.credentials.createSsl(tlsRootCert); // Создаем TLS-креденциалы
@@ -39,7 +37,7 @@ async function main() {
     hash: hash.sha256, // Указываем хеш-функцию
   });
   const network = gateway.getNetwork("mychannel"); // Получаем сеть
-  const contract = network.getContract("saveTrafficSystem"); // Получаем контракт
+  const contract = network.getContract("save-traffic-system"); // Получаем контракт
 
   app.use(express.json()); // Подключаем middleware для парсинга JSON
   app.use(
@@ -49,10 +47,10 @@ async function main() {
     })
   );
 
-  // Инициализация главной страницы
-  app.get("/", async (req, res) => {
-    res.send(await contract.submitTransaction("InitLedger")); // Вызываем транзакцию InitLedger и отправляем результат
-  });
+  // // Инициализация главной страницы
+  // app.get("/", async (req, res) => {
+  //   res.send(await contract.submitTransaction("InitLedger")); // Вызываем транзакцию InitLedger и отправляем результат
+  // });
 
   // Аутентификация пользователя
   app.post("/api/auth", async (req, res) => {
