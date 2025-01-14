@@ -62,10 +62,12 @@ async function main() {
         password,
         key
       ); // Вызываем транзакцию auth
-      const authResult = JSON.parse(utf8Decoder.decode(result)); // Декодируем и парсим результат
+      const authResult = JSON.parse(utf8Decoder.decode(result));
+      console.log(req.body);
+      console.log(authResult); // Декодируем и парсим результат
       if (authResult.auth) {
         // Проверяем, прошла ли аутентификация
-        res.json({ message: "Аутентификация успешна!", role: authResult.role }); // Отправляем успешный ответ
+        res.json({ message: "Аутентификация успешна!", user: authResult.user }); // Отправляем успешный ответ
       } else {
         res.status(401).json({ error: "Неверные учетные данные" }); // Отправляем ошибку, если аутентификация не удалась
       }
