@@ -110,13 +110,13 @@ async function main() {
   });
 
   // Добавление водительского удостоверения
-  app.post("/api/drivers/:driverId/license", async (req, res) => {
-    const { driverId } = req.params; // Извлекаем driverId из параметров URL
+  app.post("/api/drivers/:login/license", async (req, res) => {
+    const { login } = req.params; // Извлекаем driverId из параметров URL
     const { licenseNumber, expiryDate, category } = req.body; // Извлекаем данные из тела запроса
     try {
       const result = await contract.submitTransaction(
         "AddDrivingLicense",
-        driverId,
+        login,
         licenseNumber,
         expiryDate,
         category
@@ -137,13 +137,13 @@ async function main() {
   });
 
   // Регистрация транспортного средства
-  app.post("/api/drivers/:driverId/vehicle", async (req, res) => {
-    const { driverId } = req.params; // Извлекаем driverId из параметров URL
+  app.post("/api/drivers/:login/vehicle", async (req, res) => {
+    const { login } = req.params; // Извлекаем driverId из параметров URL
     const { vehicleCategory, marketValue, exploitationPeriod } = req.body; // Извлекаем данные из тела запроса
     try {
       const result = await contract.submitTransaction(
         "RegisterVehicle",
-        driverId,
+        login,
         vehicleCategory,
         marketValue,
         exploitationPeriod
@@ -161,12 +161,12 @@ async function main() {
   });
 
   // Продление водительского удостоверения
-  app.post("/api/drivers/:driverId/license/renew", async (req, res) => {
-    const { driverId } = req.params; // Извлекаем driverId из параметров URL
+  app.post("/api/drivers/:login/license/renew", async (req, res) => {
+    const { login } = req.params; // Извлекаем driverId из параметров URL
     try {
       const result = await contract.submitTransaction(
         "RenewDrivingLicense",
-        driverId
+        login
       ); // Вызываем транзакцию RenewDrivingLicense
       res.json({
         message: "Срок действия водительского удостоверения продлен!",
@@ -181,10 +181,10 @@ async function main() {
   });
 
   // Оплата штрафа
-  app.post("/api/drivers/:driverId/fine/pay", async (req, res) => {
-    const { driverId } = req.params; // Извлекаем driverId из параметров URL
+  app.post("/api/drivers/:login/fine/pay", async (req, res) => {
+    const { login } = req.params; // Извлекаем driverId из параметров URL
     try {
-      const result = await contract.submitTransaction("PayFine", driverId); // Вызываем транзакцию PayFine
+      const result = await contract.submitTransaction("PayFine", login); // Вызываем транзакцию PayFine
       res.json({
         message: "Штраф оплачен!",
         result: utf8Decoder.decode(result),
@@ -196,10 +196,10 @@ async function main() {
   });
 
   // Выписка штрафа
-  app.post("/api/drivers/:driverId/fine/issue", async (req, res) => {
-    const { driverId } = req.params; // Извлекаем driverId из параметров URL
+  app.post("/api/drivers/:login/fine/issue", async (req, res) => {
+    const { login } = req.params; // Извлекаем driverId из параметров URL
     try {
-      const result = await contract.submitTransaction("IssueFine", driverId); // Вызываем транзакцию IssueFine
+      const result = await contract.submitTransaction("IssueFine", login); // Вызываем транзакцию IssueFine
       res.json({
         message: "Штраф выписан!",
         result: utf8Decoder.decode(result),
