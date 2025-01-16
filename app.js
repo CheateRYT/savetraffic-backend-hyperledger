@@ -37,7 +37,7 @@ async function main() {
     hash: hash.sha256, // Указываем хеш-функцию
   });
   const network = gateway.getNetwork("mychannel"); // Получаем сеть
-  const contract = network.getContract("save-traffic-system"); // Получаем контракт
+  const contract = network.getContract("save-traffic-systems"); // Получаем контракт
 
   app.use(express.json()); // Подключаем middleware для парсинга JSON
   app.use(
@@ -64,53 +64,49 @@ async function main() {
       ); // Вызываем транзакцию auth
       const authResult = JSON.parse(utf8Decoder.decode(result));
       console.log(req.body);
-      console.log(authResult); // Декодируем и парсим результат
+      console.log(authResult);
       if (authResult.auth) {
-        // Проверяем, прошла ли аутентификация
-        res.json({ message: "Аутентификация успешна!", user: authResult.user }); // Отправляем успешный ответ
+        res.json({ message: "Аутентификация успешна!", user: authResult.user });
       } else {
-        res.status(401).json({ error: "Неверные учетные данные" }); // Отправляем ошибку, если аутентификация не удалась
+        res.status(401).json({ error: "Неверные учетные данные" });
       }
     } catch (error) {
-      console.error("Ошибка аутентификации:", error); // Логируем ошибку
-      res.status(500).json({ error: "Ошибка аутентификации" }); // Отправляем ошибку
+      console.error("Ошибка аутентификации:", error);
+      res.status(500).json({ error: "Ошибка аутентификации" });
     }
   });
-
-  // Создание нового пользователя
   app.post("/api/users", async (req, res) => {
     const {
       login,
       password,
       key,
-      userId,
-      balance,
       role,
       fullName,
+      balance,
       yearStartedDriving,
-    } = req.body; // Извлекаем данные из тела запроса
+    } = req.body;
+    console.log(req.body);
     try {
       const result = await contract.submitTransaction(
-        "createUser",
+        "register",
         login,
         password,
         key,
-        userId,
         balance,
         role,
         fullName,
         yearStartedDriving
-      ); // Вызываем транзакцию createUser
+      );
+
       res.status(201).json({
         message: "Пользователь успешно создан!",
         result: utf8Decoder.decode(result),
-      }); // Отправляем успешный ответ
+      });
     } catch (error) {
-      console.error("Ошибка при создании пользователя:", error); // Логируем ошибку
-      res.status(500).json({ error: "Ошибка при создании пользователя" }); // Отправляем ошибку
+      console.error("Ошибка при создании пользователя:", error);
+      res.status(500).json({ error: "Ошибка при создании пользователя" });
     }
   });
-
   // Добавление водительского удостоверения
   app.post("/api/drivers/:login/license", async (req, res) => {
     const { login } = req.params; // Извлекаем driverId из параметров URL
