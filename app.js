@@ -17,6 +17,7 @@ const certPath =
   "/home/user/project/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem";
 const keyPath =
   "/home/user/project/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore/priv_sk";
+
 async function newGrpcConnection() {
   const tlsRootCert = await fs.promises.readFile(tlsCertPath); // Читаем корневой сертификат
   const tlsCredentials = grpc.credentials.createSsl(tlsRootCert); // Создаем TLS-креденциалы
@@ -107,6 +108,30 @@ async function main() {
       res.status(500).json({ error: "Ошибка при создании пользователя" });
     }
   });
+
+  app.post("/api/auth", async (req, res) => {
+    const { login, password, key } = req.body; // Извлекаем данные из тела запроса
+    try {
+      const result = await contract.evaluateTransaction(
+        "auth",
+        login,
+        password,
+        key
+      ); // Вызываем транзакцию auth
+      const authResult = JSON.parse(utf8Decoder.decode(result));
+      console.log(req.body);
+      console.log(authResult);
+      if (authResult.auth) {
+        res.json({ message: "Аутентификация успешна!", user: authResult.user });
+      } else {
+        res.status(401).json({ error: "Неверные учетные данные" });
+      }
+    } catch (error) {
+      console.error("Ошибка аутентификации:", error);
+      res.status(500).json({ error: "Ошибка аутентификации" });
+    }
+  });
+
   // Добавление водительского удостоверения
   app.post("/api/drivers/:login/license", async (req, res) => {
     const { login } = req.params; // Извлекаем driverId из параметров URL
@@ -220,7 +245,25 @@ async function main() {
       res.status(500).json({ error: "Ошибка при получении данных" }); // Отправляем ошибку
     }
   });
+  // Получение информации о водителе по логину
+  app.get("/api/driver/:login", async (req, res) => {
+    const { login } = req.params; // Извлекаем login из параметров URL
+    try {
+      const resultBytes = await contract.evaluateTransaction("getUser", login); // Вызываем транзакцию getUser
+      const resultJson = utf8Decoder.decode(resultBytes); // Декодируем результат
 
+      // Проверяем, не является ли результат пустым
+      if (!resultJson) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+
+      const result = JSON.parse(resultJson); // Парсим результат в JSON
+      res.json(result); // Отправляем результат
+    } catch (error) {
+      console.error("Ошибка при получении данных водителя:", error); // Логируем ошибку
+      res.status(500).json({ error: "Ошибка при получении данных водителя" }); // Отправляем ошибку
+    }
+  });
   // Запуск сервера
   app.listen(port, () => {
     console.log(`Сервер запущен на http://localhost:${port}`); // Логируем сообщение о запуске сервера
