@@ -144,8 +144,13 @@ async function main() {
   // Выписка штрафа
   app.post("/api/drivers/:login/fine/issue", async (req, res) => {
     const { login } = req.params; // Извлекаем driverId из параметров URL
+    const { recipientLogin } = req.body; // Извлекаем данные из тела запроса
     try {
-      const result = await contract.submitTransaction("IssueFine", login); // Вызываем транзакцию IssueFine
+      const result = await contract.submitTransaction(
+        "IssueFine",
+        login,
+        recipientLogin
+      ); // Вызываем транзакцию IssueFine
       res.json({
         message: "Штраф выписан!",
         result: utf8Decoder.decode(result),
@@ -242,27 +247,35 @@ async function main() {
       });
     }
   });
-  // Запрос на получение водительского удостоверения
   app.post("/api/drivers/:login/license/request", async (req, res) => {
     try {
       const { login } = req.params;
-      const { licenseNumber, expiryDate, category } = req.body; // Извлекаем данные из тела запроса
+      const { licenseNumber, category } = req.body; // Извлекаем данные из тела запроса
       console.log(req.body);
 
-      const authResult = JSON.parse(utf8Decoder.decode(result));
+      const result = await contract.submitTransaction(
+        "RequestDrivingLicense",
+        login,
+        licenseNumber,
+        category
+      );
+
+      // Декодируем результат один раз
+      const decodedResult = utf8Decoder.decode(result);
+      const authResult = JSON.parse(decodedResult); // Если необходимо, парсим результат
+
       console.log("request new");
       console.log(authResult);
 
       res.json({
         message: "Запрос на получение водительского удостоверения отправлен!",
-        result: utf8Decoder.decode(result),
+        result: decodedResult, // Используем декодированный результат
       });
     } catch (error) {
       console.error(
         "Ошибка при отправке запроса на получение водительского удостоверения:",
         error
       );
-
       // Отправляем ответ клиенту с ошибкой
       res.status(500).json({
         error:
@@ -274,13 +287,14 @@ async function main() {
   // Подтверждение запроса на получение водительского удостоверения
   app.post("/api/officers/:login/license/approve", async (req, res) => {
     const { login } = req.params;
-    const { recipientLogin, requestIndex } = req.body; // Извлекаем данные из тела запроса
+    const { recipientLogin, requestIndex, expiryDate } = req.body; // Извлекаем данные из тела запроса
     try {
       const result = await contract.submitTransaction(
         "ApproveDrivingLicenseRequest",
         login,
         recipientLogin,
-        requestIndex
+        requestIndex,
+        expiryDate
       );
       res.json({
         message: "Запрос на получение водительского удостоверения утвержден!",
