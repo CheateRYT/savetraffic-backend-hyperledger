@@ -31,14 +31,13 @@ async function newGrpcConnection() {
 async function main() {
   const client = await newGrpcConnection(); // Создаем gRPC подключение
   const gateway = connect({
-    // Подключаемся к сети Hyperledger Fabric
     client,
     identity: await newIdentity(), // Получаем идентичность
     signer: await newSigner(), // Получаем подписчик
     hash: hash.sha256, // Указываем хеш-функцию
   });
   const network = gateway.getNetwork("mychannel"); // Получаем сеть
-  const contract = network.getContract("save-traffic-systems"); // Получаем контракт
+  const contract = network.getContract("save-traffic-system"); // Получаем контракт
 
   app.use(express.json()); // Подключаем middleware для парсинга JSON
   app.use(
@@ -48,12 +47,6 @@ async function main() {
     })
   );
 
-  // // Инициализация главной страницы
-  // app.get("/", async (req, res) => {
-  //   res.send(await contract.submitTransaction("InitLedger")); // Вызываем транзакцию InitLedger и отправляем результат
-  // });
-
-  // Аутентификация пользователя
   app.post("/api/auth", async (req, res) => {
     const { login, password, key } = req.body; // Извлекаем данные из тела запроса
     try {
@@ -88,6 +81,7 @@ async function main() {
     } = req.body;
     console.log(req.body);
     try {
+      console.log(`ROle - ${role}`);
       const result = await contract.submitTransaction(
         "register",
         login,
@@ -129,77 +123,6 @@ async function main() {
     } catch (error) {
       console.error("Ошибка аутентификации:", error);
       res.status(500).json({ error: "Ошибка аутентификации" });
-    }
-  });
-
-  // Добавление водительского удостоверения
-  app.post("/api/drivers/:login/license", async (req, res) => {
-    const { login } = req.params; // Извлекаем driverId из параметров URL
-    const { licenseNumber, expiryDate, category } = req.body; // Извлекаем данные из тела запроса
-    try {
-      const result = await contract.submitTransaction(
-        "AddDrivingLicense",
-        login,
-        licenseNumber,
-        expiryDate,
-        category
-      ); // Вызываем транзакцию AddDrivingLicense
-      res.status(201).json({
-        message: "Водительское удостоверение добавлено!",
-        result: utf8Decoder.decode(result),
-      }); // Отправляем успешный ответ
-    } catch (error) {
-      console.error(
-        "Ошибка при добавлении водительского удостоверения:",
-        error
-      ); // Логируем ошибку
-      res
-        .status(500)
-        .json({ error: "Ошибка при добавлении водительского удостоверения" }); // Отправляем ошибку
-    }
-  });
-
-  // Регистрация транспортного средства
-  app.post("/api/drivers/:login/vehicle", async (req, res) => {
-    const { login } = req.params; // Извлекаем driverId из параметров URL
-    const { vehicleCategory, marketValue, exploitationPeriod } = req.body; // Извлекаем данные из тела запроса
-    try {
-      const result = await contract.submitTransaction(
-        "RegisterVehicle",
-        login,
-        vehicleCategory,
-        marketValue,
-        exploitationPeriod
-      ); // Вызываем транзакцию RegisterVehicle
-      res.status(201).json({
-        message: "Транспортное средство зарегистрировано!",
-        result: utf8Decoder.decode(result),
-      }); // Отправляем успешный ответ
-    } catch (error) {
-      console.error("Ошибка при регистрации транспортного средства:", error); // Логируем ошибку
-      res
-        .status(500)
-        .json({ error: "Ошибка при регистрации транспортного средства" }); // Отправляем ошибку
-    }
-  });
-
-  // Продление водительского удостоверения
-  app.post("/api/drivers/:login/license/renew", async (req, res) => {
-    const { login } = req.params; // Извлекаем driverId из параметров URL
-    try {
-      const result = await contract.submitTransaction(
-        "RenewDrivingLicense",
-        login
-      ); // Вызываем транзакцию RenewDrivingLicense
-      res.json({
-        message: "Срок действия водительского удостоверения продлен!",
-        result: utf8Decoder.decode(result),
-      }); // Отправляем успешный ответ
-    } catch (error) {
-      console.error("Ошибка при продлении водительского удостоверения:", error); // Логируем ошибку
-      res
-        .status(500)
-        .json({ error: "Ошибка при продлении водительского удостоверения" }); // Отправляем ошибку
     }
   });
 
@@ -264,6 +187,170 @@ async function main() {
       res.status(500).json({ error: "Ошибка при получении данных водителя" }); // Отправляем ошибку
     }
   });
+
+  // Запрос на регистрацию транспортного средства
+  app.post("/api/drivers/:login/vehicle/request", async (req, res) => {
+    const { login } = req.params;
+    const { vehicleCategory, marketValue, exploitationPeriod } = req.body; // Извлекаем данные из тела запроса
+    try {
+      const result = await contract.submitTransaction(
+        "RegisterVehicleRequest",
+        login,
+        vehicleCategory,
+        marketValue,
+        exploitationPeriod
+      );
+      res.json({
+        message: "Запрос на регистрацию транспортного средства отправлен!",
+        result: utf8Decoder.decode(result),
+      });
+    } catch (error) {
+      console.error(
+        "Ошибка при отправке запроса на регистрацию транспортного средства:",
+        error
+      );
+      res.status(500).json({
+        error:
+          "Ошибка при отправке запроса на регистрацию транспортного средства",
+      });
+    }
+  });
+
+  // Подтверждение запроса на регистрацию транспортного средства
+  app.post("/api/officers/:login/vehicle/approve", async (req, res) => {
+    const { login } = req.params;
+    const { recipientLogin, requestIndex } = req.body; // Извлекаем данные из тела запроса
+    try {
+      const result = await contract.submitTransaction(
+        "ApproveRegisterVehicle",
+        login,
+        recipientLogin,
+        requestIndex
+      );
+      res.json({
+        message: "Запрос на регистрацию транспортного средства утвержден!",
+        result: utf8Decoder.decode(result),
+      });
+    } catch (error) {
+      console.error(
+        "Ошибка при утверждении запроса на регистрацию транспортного средства:",
+        error
+      );
+      res.status(500).json({
+        error:
+          "Ошибка при утверждении запроса на регистрацию транспортного средства",
+      });
+    }
+  });
+  // Запрос на получение водительского удостоверения
+  app.post("/api/drivers/:login/license/request", async (req, res) => {
+    try {
+      const { login } = req.params;
+      const { licenseNumber, expiryDate, category } = req.body; // Извлекаем данные из тела запроса
+      console.log(req.body);
+
+      const authResult = JSON.parse(utf8Decoder.decode(result));
+      console.log("request new");
+      console.log(authResult);
+
+      res.json({
+        message: "Запрос на получение водительского удостоверения отправлен!",
+        result: utf8Decoder.decode(result),
+      });
+    } catch (error) {
+      console.error(
+        "Ошибка при отправке запроса на получение водительского удостоверения:",
+        error
+      );
+
+      // Отправляем ответ клиенту с ошибкой
+      res.status(500).json({
+        error:
+          "Ошибка при отправке запроса на получение водительского удостоверения",
+      });
+    }
+  });
+
+  // Подтверждение запроса на получение водительского удостоверения
+  app.post("/api/officers/:login/license/approve", async (req, res) => {
+    const { login } = req.params;
+    const { recipientLogin, requestIndex } = req.body; // Извлекаем данные из тела запроса
+    try {
+      const result = await contract.submitTransaction(
+        "ApproveDrivingLicenseRequest",
+        login,
+        recipientLogin,
+        requestIndex
+      );
+      res.json({
+        message: "Запрос на получение водительского удостоверения утвержден!",
+        result: utf8Decoder.decode(result),
+      });
+    } catch (error) {
+      console.error(
+        "Ошибка при утверждении запроса на получение водительского удостоверения:",
+        error
+      );
+      res.status(500).json({
+        error:
+          "Ошибка при утверждении запроса на получение водительского удостоверения",
+      });
+    }
+  });
+
+  // Запрос на продление водительского удостоверения
+  app.post("/api/drivers/:login/license/renew/request", async (req, res) => {
+    const { login } = req.params;
+    const { licenseNumber } = req.body; // Извлекаем данные из тела запроса
+    try {
+      const result = await contract.submitTransaction(
+        "RequestRenewDrivingLicense",
+        login,
+        licenseNumber
+      );
+      res.json({
+        message: "Запрос на продление водительского удостоверения отправлен!",
+        result: utf8Decoder.decode(result),
+      });
+    } catch (error) {
+      console.error(
+        "Ошибка при отправке запроса на продление водительского удостоверения:",
+        error
+      );
+      res.status(500).json({
+        error:
+          "Ошибка при отправке запроса на продление водительского удостоверения",
+      });
+    }
+  });
+
+  // Подтверждение запроса на продление водительского удостоверения
+  app.post("/api/officers/:login/license/renew/approve", async (req, res) => {
+    const { login } = req.params;
+    const { recipientLogin, requestIndex } = req.body; // Извлекаем данные из тела запроса
+    try {
+      const result = await contract.submitTransaction(
+        "ApproveRenewDrivingLicenseRequest",
+        login,
+        recipientLogin,
+        requestIndex
+      );
+      res.json({
+        message: "Запрос на продление водительского удостоверения утвержден!",
+        result: utf8Decoder.decode(result),
+      });
+    } catch (error) {
+      console.error(
+        "Ошибка при утверждении запроса на продление водительского удостоверения:",
+        error
+      );
+      res.status(500).json({
+        error:
+          "Ошибка при утверждении запроса на продление водительского удостоверения",
+      });
+    }
+  });
+
   // Запуск сервера
   app.listen(port, () => {
     console.log(`Сервер запущен на http://localhost:${port}`); // Логируем сообщение о запуске сервера
@@ -285,3 +372,74 @@ async function newSigner() {
 
 // Запуск основного процесса
 main().catch(console.error); // Запускаем основную функцию и обрабатываем ошибки
+
+// // Добавление водительского удостоверения
+// app.post("/api/drivers/:login/license", async (req, res) => {
+//   const { login } = req.params; // Извлекаем driverId из параметров URL
+//   const { licenseNumber, expiryDate, category } = req.body; // Извлекаем данные из тела запроса
+//   try {
+//     const result = await contract.submitTransaction(
+//       "AddDrivingLicense",
+//       login,
+//       licenseNumber,
+//       expiryDate,
+//       category
+//     ); // Вызываем транзакцию AddDrivingLicense
+//     res.status(201).json({
+//       message: "Водительское удостоверение добавлено!",
+//       result: utf8Decoder.decode(result),
+//     }); // Отправляем успешный ответ
+//   } catch (error) {
+//     console.error(
+//       "Ошибка при добавлении водительского удостоверения:",
+//       error
+//     ); // Логируем ошибку
+//     res
+//       .status(500)
+//       .json({ error: "Ошибка при добавлении водительского удостоверения" }); // Отправляем ошибку
+//   }
+// });
+
+// // Регистрация транспортного средства
+// app.post("/api/drivers/:login/vehicle", async (req, res) => {
+//   const { login } = req.params; // Извлекаем driverId из параметров URL
+//   const { vehicleCategory, marketValue, exploitationPeriod } = req.body; // Извлекаем данные из тела запроса
+//   try {
+//     const result = await contract.submitTransaction(
+//       "RegisterVehicle",
+//       login,
+//       vehicleCategory,
+//       marketValue,
+//       exploitationPeriod
+//     ); // Вызываем транзакцию RegisterVehicle
+//     res.status(201).json({
+//       message: "Транспортное средство зарегистрировано!",
+//       result: utf8Decoder.decode(result),
+//     }); // Отправляем успешный ответ
+//   } catch (error) {
+//     console.error("Ошибка при регистрации транспортного средства:", error); // Логируем ошибку
+//     res
+//       .status(500)
+//       .json({ error: "Ошибка при регистрации транспортного средства" }); // Отправляем ошибку
+//   }
+// });
+
+// // Продление водительского удостоверения
+// app.post("/api/drivers/:login/license/renew", async (req, res) => {
+//   const { login } = req.params; // Извлекаем driverId из параметров URL
+//   try {
+//     const result = await contract.submitTransaction(
+//       "RenewDrivingLicense",
+//       login
+//     ); // Вызываем транзакцию RenewDrivingLicense
+//     res.json({
+//       message: "Срок действия водительского удостоверения продлен!",
+//       result: utf8Decoder.decode(result),
+//     }); // Отправляем успешный ответ
+//   } catch (error) {
+//     console.error("Ошибка при продлении водительского удостоверения:", error); // Логируем ошибку
+//     res
+//       .status(500)
+//       .json({ error: "Ошибка при продлении водительского удостоверения" }); // Отправляем ошибку
+//   }
+// });
